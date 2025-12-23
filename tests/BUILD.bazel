@@ -1,0 +1,33 @@
+# Copyright 2025 Jeff Hodsdon
+# SPDX-License-Identifier: Apache-2.0
+
+"""Tests for rules_swift_previews."""
+
+load(":aspect_tests.bzl", "aspect_test_suite")
+load(":package_generator_tests.bzl", "package_generator_test_suite")
+load(":script_generator_tests.bzl", "script_generator_test_suite")
+
+package_generator_test_suite(name = "package_generator_tests")
+
+script_generator_test_suite(name = "script_generator_tests")
+
+aspect_test_suite(name = "aspect_tests")
+
+# Convenience target to run all unit tests (pure Starlark, fast)
+test_suite(
+    name = "unit_tests",
+    tests = [
+        ":package_generator_tests",
+        ":script_generator_tests",
+    ],
+)
+
+# Full test suite including analysis tests (requires Swift toolchain)
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":aspect_tests",
+        ":package_generator_tests",
+        ":script_generator_tests",
+    ],
+)

@@ -1,0 +1,38 @@
+# Copyright 2025 Jeff Hodsdon
+# SPDX-License-Identifier: Apache-2.0
+
+"""Test fixtures for aspect analysis tests."""
+
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+# Simple library with no dependencies
+swift_library(
+    name = "SimpleLib",
+    srcs = ["Simple.swift"],
+    module_name = "SimpleLib",
+    visibility = ["//tests:__subpackages__"],
+)
+
+# Library with a dependency
+swift_library(
+    name = "CoreLib",
+    srcs = ["Core.swift"],
+    module_name = "CoreLib",
+    visibility = ["//tests:__subpackages__"],
+)
+
+swift_library(
+    name = "AppLib",
+    srcs = ["App.swift"],
+    module_name = "AppLib",
+    visibility = ["//tests:__subpackages__"],
+    deps = [":CoreLib"],
+)
+
+# Library with custom module name
+swift_library(
+    name = "utils_target",
+    srcs = ["Utils.swift"],
+    module_name = "Utilities",
+    visibility = ["//tests:__subpackages__"],
+)
