@@ -2,15 +2,6 @@
 
 Bazel rules for generating SPM Package.swift files to enable SwiftUI Previews in Xcode for Bazel-built iOS projects.
 
-## Problem
-
-When using Bazel to build iOS apps, SwiftUI Previews don't work because Xcode expects an SPM Package.swift structure. This ruleset bridges that gap by:
-
-1. Collecting source files from your `swift_library` and its dependencies via a Bazel aspect
-2. Generating a `Package.swift` that mirrors your dependency structure
-3. Copying dependency sources to a `.deps/` directory
-4. Optionally integrating with `rules_swift_resources` for resource module support
-
 ## Quick Start
 
 ### MODULE.bazel
