@@ -1,0 +1,18 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@swift_preview_rules//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
+
+swift_library(
+    name = "ResourceViews",
+    srcs = glob(["*.swift"], exclude = SWIFT_PREVIEW_EXCLUDES),
+    module_name = "ResourceViews",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//Resources",
+    ],
+)
+
+swift_previews_package(
+    name = "previews",
+    lib = ":ResourceViews",
+    macos_version = "14",
+)

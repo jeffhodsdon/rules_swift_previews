@@ -1,0 +1,40 @@
+"""Internal implementation for rules_swift_previews."""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(
+    glob(["*.bzl"]),
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "providers",
+    srcs = ["providers.bzl"],
+)
+
+bzl_library(
+    name = "package_generator",
+    srcs = ["package_generator.bzl"],
+)
+
+bzl_library(
+    name = "script_generator",
+    srcs = ["script_generator.bzl"],
+)
+
+bzl_library(
+    name = "core",
+    srcs = ["core.bzl"],
+    deps = [
+        ":package_generator",
+        ":providers",
+        ":script_generator",
+    ],
+)
+
+bzl_library(
+    name = "repo_rule",
+    srcs = ["repo_rule.bzl"],
+)

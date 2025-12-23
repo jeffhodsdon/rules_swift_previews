@@ -1,0 +1,21 @@
+# Bazel
+bazel-*
+MODULE.bazel.lock
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Generated preview files
+**/Package.swift
+**/.deps/
+
+# macOS
+.DS_Store
+
+# IDE / Editor
+.claude/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/

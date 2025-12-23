@@ -1,0 +1,15 @@
+{
+    "primary": {
+        "red": 0.4,
+        "green": 0.2,
+        "blue": 0.8
+    },
+    "accent": {
+        "red": 1.0,
+        "green": 0.6,
+        "blue": 0.2
+    },
+    "background": {
+        "white": 0.95
+    }
+}
