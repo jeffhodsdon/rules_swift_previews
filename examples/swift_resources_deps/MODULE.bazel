@@ -10,27 +10,17 @@ local_path_override(
 )
 
 bazel_dep(name = "rules_swift_previews", version = "0.0.1")
-bazel_dep(name = "rules_swift", version = "3.4.1", repo_name = "build_bazel_rules_swift")
+bazel_dep(name = "rules_swift", version = "3.4.1")
 bazel_dep(name = "rules_swift_resources", version = "0.2.0")
-bazel_dep(name = "apple_support", version = "1.17.1")
+bazel_dep(name = "apple_support", version = "2.0.0")
 
-# Use git override for rules_swift_resources
-git_override(
-    module_name = "rules_swift_resources",
-    remote = "https://github.com/jeffhodsdon/SwiftResources.git",
-    tag = "0.2.0",
-)
-
-# Configure swift_previews with SwiftResources enabled
+# Enable swift_previews with rules_swift_resources integration
 swift_previews = use_extension(
     "@rules_swift_previews//:extensions.bzl",
     "swift_previews",
 )
-swift_previews.configure(
-    enable_swift_resources = True,
-    sr_label = "@rules_swift_resources//:sr",
-)
-use_repo(swift_previews, "swift_preview_rules")
+swift_previews.use_swift_resources()
+use_repo(swift_previews, "swift_previews")
 
 # Apple toolchain configuration
 apple_cc_configure = use_extension(

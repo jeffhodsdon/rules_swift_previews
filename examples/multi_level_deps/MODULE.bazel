@@ -10,16 +10,15 @@ local_path_override(
 )
 
 bazel_dep(name = "rules_swift_previews", version = "0.0.1")
-bazel_dep(name = "rules_swift", version = "3.4.1", repo_name = "build_bazel_rules_swift")
+bazel_dep(name = "rules_swift", version = "3.4.1")
 bazel_dep(name = "apple_support", version = "1.17.1")
 
-# Configure swift_previews (basic mode - no sr binary needed for this example)
+# Configure swift_previews
 swift_previews = use_extension(
     "@rules_swift_previews//:extensions.bzl",
     "swift_previews",
 )
-swift_previews.configure()
-use_repo(swift_previews, "swift_preview_rules")
+use_repo(swift_previews, "swift_previews")
 
 # Apple toolchain configuration
 apple_cc_configure = use_extension(

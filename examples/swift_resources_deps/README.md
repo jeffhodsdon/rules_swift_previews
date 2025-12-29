@@ -17,7 +17,7 @@ swift_resources_deps/
 
 ## Requirements
 
-This example uses [rules_swift_resources](https://github.com/jeffhodsdon/SwiftResources) via git_override.
+This example uses [rules_swift_resources](https://github.com/jeffhodsdon/SwiftResources) from the Bazel Central Registry.
 
 ## Usage
 
@@ -41,7 +41,7 @@ This example uses [rules_swift_resources](https://github.com/jeffhodsdon/SwiftRe
    let data = Resources.files.colors.data
    ```
 
-2. `swift_previews.configure(enable_swift_resources = True, sr_label = "@rules_swift_resources//:sr")` enables resource detection
+2. `swift_previews.use_swift_resources()` enables resource detection
 
 3. The aspect detects `swift_resources_library` targets by their rule kind
 

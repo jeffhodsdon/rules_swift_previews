@@ -1,15 +1,11 @@
-"""rules_swift_previews - Bazel rules for SwiftUI Previews."""
-
 module(
     name = "rules_swift_previews",
-    version = "0.0.1",
+    version = "0.0.0",
+    bazel_compatibility = [">=8.0.0"],
     compatibility_level = 1,
     repo_name = "rules_swift_previews",
 )
 
-# Required dependencies
-bazel_dep(name = "bazel_skylib", version = "1.7.1")
-bazel_dep(name = "rules_swift", version = "3.4.1", repo_name = "build_bazel_rules_swift")
-
-# Note: rules_swift_resources is NOT a hard dependency.
-# It's only required if users enable resource support via the module extension.
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "rules_swift", version = "3.4.1")
+bazel_dep(name = "rules_swift_resources", version = "0.2.0", dev_dependency = True)

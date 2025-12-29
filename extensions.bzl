@@ -3,50 +3,38 @@
 
 """Module extension for rules_swift_previews."""
 
-load("//internal:repo_rule.bzl", "swift_preview_rules_repository")
+load("//internal:repo_rule.bzl", "swift_previews_repository")
 
 def _swift_previews_impl(module_ctx):
     """Implementation of the swift_previews module extension."""
 
-    enable_swift_resources = False
-    sr_label = None
+    swift_resources = None
 
+    # Check if any module enabled swift_resources integration
     for mod in module_ctx.modules:
-        for tag in mod.tags.configure:
-            if tag.enable_swift_resources:
-                enable_swift_resources = True
-                # Convert the label to a canonical string that works across repos
-                if tag.sr_label:
-                    sr_label = str(tag.sr_label)
+        if mod.tags.use_swift_resources:
+            # Use canonical label format for cross-repo visibility
+            swift_resources = "@@rules_swift_resources+//:sr"
+            break
 
-    swift_preview_rules_repository(
-        name = "swift_preview_rules",
-        enable_swift_resources = enable_swift_resources,
-        sr_label = sr_label,
+    swift_previews_repository(
+        name = "swift_previews",
+        swift_resources = swift_resources,
     )
 
     return module_ctx.extension_metadata(
-        root_module_direct_deps = ["swift_preview_rules"],
+        root_module_direct_deps = ["swift_previews"],
         root_module_direct_dev_deps = [],
     )
 
-_configure = tag_class(
-    doc = "Configure rules_swift_previews.",
-    attrs = {
-        "enable_swift_resources": attr.bool(
-            default = False,
-            doc = "Enable sr binary for generating Swift resource accessors. Requires rules_swift_resources.",
-        ),
-        "sr_label": attr.label(
-            default = None,
-            doc = "Label for the sr binary from rules_swift_resources. Required when enable_swift_resources=True.",
-        ),
-    },
+use_swift_resources = tag_class(
+    doc = "Enable rules_swift_resources integration for generating Swift resource accessors.",
+    attrs = {},
 )
 
 swift_previews = module_extension(
     implementation = _swift_previews_impl,
     tag_classes = {
-        "configure": _configure,
+        "use_swift_resources": use_swift_resources,
     },
 )

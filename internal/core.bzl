@@ -4,7 +4,7 @@
 """Core implementation for rules_swift_previews.
 
 Uses convention-based resource detection (checks rule kind) rather than
-importing SwiftResourceInfo. This allows a single unified implementation.
+importing SwiftResourceInfo.
 """
 
 load("//internal:package_generator.bzl", "generate_package_swift")
@@ -16,12 +16,7 @@ load("//internal:script_generator.bzl",
      "generate_package_write_script",
      "generate_sr_script")
 
-# Rule kinds for swift_resources_library (convention-based detection)
-# The macro creates a wrapper rule, so we check for both
-_RESOURCE_LIBRARY_RULE_KINDS = [
-    "swift_resources_library",
-    "_swift_resources_library_wrapper",
-]
+_SWIFT_RESOURCES_RULE_KIND = "swift_resources"
 
 def _source_collector_aspect_impl(target, ctx):
     """Aspect that collects source files and resources from swift_library targets.
@@ -44,8 +39,8 @@ def _source_collector_aspect_impl(target, ctx):
             module_deps = {},
         )]
 
-    # Convention-based resource detection: check if this is a swift_resources_library
-    if ctx.rule.kind in _RESOURCE_LIBRARY_RULE_KINDS:
+    # Detect swift_resources rule (created by swift_resources_library macro)
+    if ctx.rule.kind == _SWIFT_RESOURCES_RULE_KIND:
         module_name = target.label.name
         if hasattr(ctx.rule.attr, "module_name") and ctx.rule.attr.module_name:
             module_name = ctx.rule.attr.module_name
@@ -218,43 +213,66 @@ _BASE_ATTRS = {
     "visionos_version": attr.string(default = ""),
 }
 
-# Basic rule (no sr binary)
-swift_previews_package_rule = rule(
-    implementation = swift_previews_package_impl,
-    attrs = _BASE_ATTRS,
-    executable = True,
-    doc = "Generates an SPM Package.swift for Xcode SwiftUI previews.",
-)
-
-def swift_previews_package(
-        name,
-        lib,
-        ios_version = "18",
-        macos_version = "",
-        tvos_version = "",
-        watchos_version = "",
-        visionos_version = "",
-        visibility = None):
-    """Generate an SPM Package.swift for Xcode SwiftUI previews.
+def create_swift_previews_rule(extra_attrs = {}):
+    """Factory to create swift_previews_package rule variants.
 
     Args:
-        name: Target name (typically "previews")
-        lib: The swift_library target to generate previews for
-        ios_version: iOS deployment target (default: "18")
-        macos_version: macOS deployment target (empty to omit)
-        tvos_version: tvOS deployment target (empty to omit)
-        watchos_version: watchOS deployment target (empty to omit)
-        visionos_version: visionOS deployment target (empty to omit)
-        visibility: Bazel visibility
+        extra_attrs: Additional attributes to add to the rule (e.g., _sr for SwiftResources)
+
+    Returns:
+        A rule that generates SPM Package.swift for Xcode SwiftUI previews.
     """
-    swift_previews_package_rule(
-        name = name,
-        lib = lib,
-        package_dir = native.package_name(),
-        ios_version = ios_version,
-        macos_version = macos_version,
-        tvos_version = tvos_version,
-        watchos_version = watchos_version,
-        visionos_version = visionos_version,
-        visibility = visibility,
+    attrs = dict(_BASE_ATTRS)
+    attrs.update(extra_attrs)
+    return rule(
+        implementation = swift_previews_package_impl,
+        attrs = attrs,
+        executable = True,
+        doc = "Generates an SPM Package.swift for Xcode SwiftUI previews.",
     )
+
+def create_swift_previews_macro(rule_fn):
+    """Factory to create swift_previews_package macro wrapper.
+
+    Args:
+        rule_fn: The rule function to wrap
+
+    Returns:
+        A macro that wraps the rule with native.package_name() for package_dir.
+    """
+    def swift_previews_package(
+            name,
+            lib,
+            ios_version = "18",
+            macos_version = "",
+            tvos_version = "",
+            watchos_version = "",
+            visionos_version = "",
+            visibility = None):
+        """Generate an SPM Package.swift for Xcode SwiftUI previews.
+
+        Args:
+            name: Target name (typically "previews")
+            lib: The swift_library target to generate previews for
+            ios_version: iOS deployment target (default: "18")
+            macos_version: macOS deployment target (empty to omit)
+            tvos_version: tvOS deployment target (empty to omit)
+            watchos_version: watchOS deployment target (empty to omit)
+            visionos_version: visionOS deployment target (empty to omit)
+            visibility: Bazel visibility
+        """
+        rule_fn(
+            name = name,
+            lib = lib,
+            package_dir = native.package_name(),
+            ios_version = ios_version,
+            macos_version = macos_version,
+            tvos_version = tvos_version,
+            watchos_version = watchos_version,
+            visionos_version = visionos_version,
+            visibility = visibility,
+        )
+    return swift_previews_package
+
+swift_previews_package_rule = create_swift_previews_rule()
+swift_previews_package = create_swift_previews_macro(swift_previews_package_rule)

@@ -7,21 +7,20 @@ Bazel rules for generating SPM Package.swift files to enable SwiftUI Previews in
 ### MODULE.bazel
 
 ```python
-bazel_dep(name = "rules_swift_previews", version = "1.0.0")
+bazel_dep(name = "rules_swift_previews", version = "0.0.0")
 
 swift_previews = use_extension(
     "@rules_swift_previews//:extensions.bzl",
     "swift_previews",
 )
-swift_previews.configure()
-use_repo(swift_previews, "swift_preview_rules")
+use_repo(swift_previews, "swift_previews")
 ```
 
 ### BUILD.bazel
 
 ```python
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
-load("@swift_preview_rules//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
+load("@rules_swift//swift:swift.bzl", "swift_library")
+load("@swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
 
 swift_library(
     name = "MyViews",
@@ -51,21 +50,18 @@ If you use `rules_swift_resources` for type-safe resource access:
 
 ```python
 # MODULE.bazel
-bazel_dep(name = "rules_swift_previews", version = "1.0.0")
-bazel_dep(name = "rules_swift_resources", version = "1.0.0")
+bazel_dep(name = "rules_swift_previews", version = "0.0.0")
+bazel_dep(name = "rules_swift_resources", version = "0.2.0")
 
 swift_previews = use_extension(
     "@rules_swift_previews//:extensions.bzl",
     "swift_previews",
 )
-swift_previews.configure(
-    enable_swift_resources = True,
-    sr_label = "@rules_swift_resources//:sr",
-)
-use_repo(swift_previews, "swift_preview_rules")
+swift_previews.use_swift_resources()
+use_repo(swift_previews, "swift_previews")
 ```
 
-Resource modules (`swift_resources_library`) are automatically detected and included in the generated Package.swift.
+Resource modules (`swift_resources_library`) are automatically detected by rule kind and included in the generated Package.swift.
 
 ## Generated Structure
 
