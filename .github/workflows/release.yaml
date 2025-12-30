@@ -17,6 +17,8 @@ jobs:
       release_files: rules_swift_previews-*.tar.gz
       prerelease: false
       tag_name: ${{ github.ref_name }}
+      # Only run unit tests other tests require macOS/Swift
+      bazel_test_command: "bazel test //tests:unit_tests"
 
   publish:
     needs: release
