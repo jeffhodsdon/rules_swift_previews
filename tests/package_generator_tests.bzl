@@ -25,7 +25,7 @@ def _basic_package_test_impl(ctx):
     asserts.true(env, '.iOS("18.0")' in result)
 
     # Check main target structure
-    asserts.true(env, '.target(' in result)
+    asserts.true(env, ".target(" in result)
     asserts.true(env, 'path: "."' in result)
     asserts.true(env, 'exclude: ["BUILD.bazel", ".deps", "Package.swift", "Package.resolved"]' in result)
 
@@ -111,8 +111,8 @@ def _custom_platforms_test_impl(ctx):
     asserts.true(env, '.iOS("16.0")' in result)
     asserts.true(env, '.macOS("14.0")' in result)
     asserts.true(env, '.visionOS("1.0")' in result)
-    asserts.false(env, '.tvOS' in result)
-    asserts.false(env, '.watchOS' in result)
+    asserts.false(env, ".tvOS" in result)
+    asserts.false(env, ".watchOS" in result)
 
     return unittest.end(env)
 

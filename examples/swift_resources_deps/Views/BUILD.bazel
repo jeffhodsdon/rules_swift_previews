@@ -3,7 +3,10 @@ load("@swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_pac
 
 swift_library(
     name = "ResourceViews",
-    srcs = glob(["*.swift"], exclude = SWIFT_PREVIEW_EXCLUDES),
+    srcs = glob(
+        ["*.swift"],
+        exclude = SWIFT_PREVIEW_EXCLUDES,
+    ),
     module_name = "ResourceViews",
     visibility = ["//visibility:public"],
     deps = [

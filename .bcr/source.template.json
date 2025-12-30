@@ -1,0 +1,6 @@
+{
+  "integrity": "",
+  "strip_prefix": "rules_swift_previews-{VERSION}",
+  "url": "https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/rules_swift_previews-{TAG}.tar.gz",
+  "docs_url": "https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/rules_swift_previews-{TAG}.docs.tar.gz"
+}

@@ -1,7 +1,10 @@
 # Example: Multi-level dependencies (Views -> Theme -> DesignSystem)
 # Demonstrates swift_previews_package with transitive module dependencies
 
-module(name = "multi_level_deps_example", version = "0.0.1")
+module(
+    name = "multi_level_deps_example",
+    version = "0.0.1",
+)
 
 # Use local rules_swift_previews (two levels up)
 local_path_override(

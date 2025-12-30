@@ -4,12 +4,14 @@
 """Unit tests for script_generator.bzl."""
 
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
-load("//internal:script_generator.bzl",
-     "generate_base_script",
-     "generate_copy_resources_script_from_paths",
-     "generate_copy_sources_script_from_paths",
-     "generate_package_write_script",
-     "generate_sr_script_from_paths")
+load(
+    "//internal:script_generator.bzl",
+    "generate_base_script",
+    "generate_copy_resources_script_from_paths",
+    "generate_copy_sources_script_from_paths",
+    "generate_package_write_script",
+    "generate_sr_script_from_paths",
+)
 
 # =============================================================================
 # Test: generate_base_script
@@ -129,22 +131,22 @@ def _sr_script_test_impl(ctx):
 
     # Check sr generate command
     asserts.true(env, '"$SR" generate' in script)
-    asserts.true(env, '--access-level public' in script)
+    asserts.true(env, "--access-level public" in script)
     asserts.true(env, '--module-name "Resources"' in script)
-    asserts.true(env, '--bundle .module' in script)
+    asserts.true(env, "--bundle .module" in script)
 
     # Check font files
-    asserts.true(env, '--font-file' in script)
-    asserts.true(env, '$DEPS_DIR/Resources/Resources/MyFont.ttf' in script)
+    asserts.true(env, "--font-file" in script)
+    asserts.true(env, "$DEPS_DIR/Resources/Resources/MyFont.ttf" in script)
 
     # Check image files
-    asserts.true(env, '--image-file' in script)
-    asserts.true(env, '$DEPS_DIR/Resources/Resources/icon.png' in script)
-    asserts.true(env, '$DEPS_DIR/Resources/Resources/logo.pdf' in script)
+    asserts.true(env, "--image-file" in script)
+    asserts.true(env, "$DEPS_DIR/Resources/Resources/icon.png" in script)
+    asserts.true(env, "$DEPS_DIR/Resources/Resources/logo.pdf" in script)
 
     # Check other files
-    asserts.true(env, '--file-path' in script)
-    asserts.true(env, '$DEPS_DIR/Resources/Resources/colors.json' in script)
+    asserts.true(env, "--file-path" in script)
+    asserts.true(env, "$DEPS_DIR/Resources/Resources/colors.json" in script)
 
     # Check output
     asserts.true(env, '--output "$DEPS_DIR/Resources/Resources.swift"' in script)
@@ -167,8 +169,8 @@ def _sr_script_external_prefix_test_impl(ctx):
     script = "\n".join(result)
 
     # ../rules_swift_resources/sr should become rules_swift_resources/sr
-    asserts.true(env, '$RUNFILES_DIR/rules_swift_resources/sr' in script)
-    asserts.false(env, '$RUNFILES_DIR/../' in script)
+    asserts.true(env, "$RUNFILES_DIR/rules_swift_resources/sr" in script)
+    asserts.false(env, "$RUNFILES_DIR/../" in script)
 
     return unittest.end(env)
 
@@ -188,8 +190,8 @@ def _sr_script_fallback_test_impl(ctx):
     script = "\n".join(result)
 
     # Check fallback warning is present
-    asserts.true(env, 'Warning: SwiftResources sr not found' in script)
-    asserts.true(env, 'Searched in: $RUNFILES_DIR' in script)
+    asserts.true(env, "Warning: SwiftResources sr not found" in script)
+    asserts.true(env, "Searched in: $RUNFILES_DIR" in script)
 
     return unittest.end(env)
 

@@ -8,12 +8,6 @@ Bazel rules for generating SPM Package.swift files to enable SwiftUI Previews in
 
 ```python
 bazel_dep(name = "rules_swift_previews", version = "0.0.0")
-
-swift_previews = use_extension(
-    "@rules_swift_previews//:extensions.bzl",
-    "swift_previews",
-)
-use_repo(swift_previews, "swift_previews")
 ```
 
 ### BUILD.bazel

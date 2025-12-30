@@ -231,7 +231,7 @@ def generate_base_script(package_dir):
         "# BUILD_WORKSPACE_DIRECTORY is set by Bazel during 'bazel run'",
         'if [ -z "$BUILD_WORKSPACE_DIRECTORY" ]; then',
         '  echo "Error: This script must be run via bazel run"',
-        '  exit 1',
+        "  exit 1",
         "fi",
         "",
         "# Get runfiles directory",

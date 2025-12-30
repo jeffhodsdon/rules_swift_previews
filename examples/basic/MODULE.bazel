@@ -1,8 +1,14 @@
 # Minimal example - single SwiftUI module with previews
 
-module(name = "basic_example", version = "0.0.1")
+module(
+    name = "basic_example",
+    version = "0.0.1",
+)
 
-local_path_override(module_name = "rules_swift_previews", path = "../..")
+local_path_override(
+    module_name = "rules_swift_previews",
+    path = "../..",
+)
 
 bazel_dep(name = "rules_swift_previews", version = "0.0.1")
 bazel_dep(name = "rules_swift", version = "3.4.1")

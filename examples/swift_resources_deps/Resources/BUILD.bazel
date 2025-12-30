@@ -2,8 +2,8 @@ load("@rules_swift_resources//rules_swift_resources:defs.bzl", "swift_resources_
 
 swift_resources_library(
     name = "Resources",
+    access_level = "public",
     files = glob(["Resources/**"]),
     module_name = "Resources",
-    access_level = "public",
     visibility = ["//visibility:public"],
 )

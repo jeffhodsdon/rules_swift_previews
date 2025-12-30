@@ -1,7 +1,10 @@
 # Example: Swift Resources Dependencies
 # Demonstrates swift_previews_package with swift_resources_library for bundled resources
 
-module(name = "swift_resources_deps_example", version = "0.0.1")
+module(
+    name = "swift_resources_deps_example",
+    version = "0.0.1",
+)
 
 # Use local rules_swift_previews (two levels up)
 local_path_override(

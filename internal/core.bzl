@@ -9,12 +9,14 @@ importing SwiftResourceInfo.
 
 load("//internal:package_generator.bzl", "generate_package_swift")
 load("//internal:providers.bzl", "SourceFilesInfo")
-load("//internal:script_generator.bzl",
-     "generate_base_script",
-     "generate_copy_resources_script",
-     "generate_copy_sources_script",
-     "generate_package_write_script",
-     "generate_sr_script")
+load(
+    "//internal:script_generator.bzl",
+    "generate_base_script",
+    "generate_copy_resources_script",
+    "generate_copy_sources_script",
+    "generate_package_write_script",
+    "generate_sr_script",
+)
 
 _SWIFT_RESOURCES_RULE_KIND = "swift_resources"
 
@@ -77,11 +79,7 @@ def _source_collector_aspect_impl(target, ctx):
     if hasattr(ctx.rule.attr, "deps"):
         for dep in ctx.rule.attr.deps:
             if SourceFilesInfo in dep:
-                # Get the module name of this dep
-                dep_module = dep.label.name
-                if hasattr(dep, "label"):
-                    dep_module = dep.label.name
-                # Check for module_sources to find actual module name
+                # Collect module names from this dependency's source info
                 for name in dep[SourceFilesInfo].module_sources.keys():
                     if name not in direct_dep_modules:
                         direct_dep_modules.append(name)
@@ -124,6 +122,12 @@ def swift_previews_package_impl(ctx):
     """Implementation of the preview package generator rule.
 
     Exported for use by generated repository rules.
+
+    Args:
+        ctx: The rule context.
+
+    Returns:
+        A list containing DefaultInfo with the executable script and runfiles.
     """
     lib = ctx.attr.lib
     lib_module_name = lib.label.name
@@ -146,6 +150,7 @@ def swift_previews_package_impl(ctx):
         for module_name, resources in info.resource_modules.items():
             resource_modules[module_name] = resources
             all_resource_files.extend(resources)
+
         # Collect module dependencies
         for module_name, deps in info.module_deps.items():
             if module_name != lib_module_name:
@@ -240,6 +245,7 @@ def create_swift_previews_macro(rule_fn):
     Returns:
         A macro that wraps the rule with native.package_name() for package_dir.
     """
+
     def swift_previews_package(
             name,
             lib,
@@ -272,6 +278,7 @@ def create_swift_previews_macro(rule_fn):
             visionos_version = visionos_version,
             visibility = visibility,
         )
+
     return swift_previews_package
 
 swift_previews_package_rule = create_swift_previews_rule()

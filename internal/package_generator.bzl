@@ -94,6 +94,7 @@ def generate_package_swift(
 
     # Add main view target - path is "." (the Views directory itself)
     all_deps = filtered_dep_modules + list(resource_modules)
+
     # Remove duplicates while preserving order
     seen = set()
     unique_deps = []
