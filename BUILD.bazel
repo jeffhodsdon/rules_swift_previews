@@ -12,9 +12,6 @@ exports_files([
 bzl_library(
     name = "extensions",
     srcs = ["extensions.bzl"],
-    deps = [
-        "//internal:repo_rule",
-    ],
 )
 
 bzl_library(
