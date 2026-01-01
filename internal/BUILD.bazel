@@ -25,16 +25,29 @@ bzl_library(
 )
 
 bzl_library(
-    name = "core",
-    srcs = ["core.bzl"],
-    deps = [
-        ":package_generator",
-        ":providers",
-        ":script_generator",
-    ],
+    name = "cc_collector",
+    srcs = ["cc_collector.bzl"],
 )
 
 bzl_library(
-    name = "repo_rule",
-    srcs = ["repo_rule.bzl"],
+    name = "objc_collector",
+    srcs = ["objc_collector.bzl"],
+)
+
+bzl_library(
+    name = "swift_collector",
+    srcs = ["swift_collector.bzl"],
+)
+
+bzl_library(
+    name = "core",
+    srcs = ["core.bzl"],
+    deps = [
+        ":cc_collector",
+        ":objc_collector",
+        ":package_generator",
+        ":providers",
+        ":script_generator",
+        ":swift_collector",
+    ],
 )
