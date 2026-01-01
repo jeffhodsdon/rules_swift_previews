@@ -14,7 +14,7 @@ bazel_dep(name = "rules_swift_previews", version = "0.0.0")
 
 ```python
 load("@rules_swift//swift:swift.bzl", "swift_library")
-load("@swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
+load("@rules_swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
 
 swift_library(
     name = "MyViews",
@@ -38,24 +38,9 @@ bazel run //path/to/views:previews
 open path/to/views/
 ```
 
-## With SwiftResources Integration
+## SwiftResources Integration
 
-If you use `rules_swift_resources` for type-safe resource access:
-
-```python
-# MODULE.bazel
-bazel_dep(name = "rules_swift_previews", version = "0.0.0")
-bazel_dep(name = "rules_swift_resources", version = "0.2.0")
-
-swift_previews = use_extension(
-    "@rules_swift_previews//:extensions.bzl",
-    "swift_previews",
-)
-swift_previews.use_swift_resources()
-use_repo(swift_previews, "swift_previews")
-```
-
-Resource modules (`swift_resources_library`) are automatically detected by rule kind and included in the generated Package.swift.
+If you use `rules_swift_resources` for type-safe resource access, resource modules (`swift_resources_library`) are automatically detected and included in the generated Package.swift. No additional configuration needed.
 
 ## Generated Structure
 

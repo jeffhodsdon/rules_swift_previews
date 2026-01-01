@@ -1,8 +1,21 @@
-# Example: Multi-level dependencies (Views -> Theme -> DesignSystem)
-# Demonstrates swift_previews_package with transitive module dependencies
+# Example: C and Objective-C Interop
+# Demonstrates swift_previews_package with cc_library and objc_library dependencies
+#
+# Dependency chain (4 levels, 3 languages):
+#
+#   SecureInputView (SwiftUI)
+#          |
+#          v
+#   SecureStorage (Swift API)
+#          |
+#          v
+#   KeychainBridge (Objective-C)  <-- wraps Security.framework
+#          |
+#          v
+#   CryptoHelpers (C)  <-- low-level crypto utilities
 
 module(
-    name = "multi_level_deps_example",
+    name = "c_objc_interop_example",
     version = "0.0.1",
 )
 

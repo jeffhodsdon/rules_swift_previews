@@ -35,113 +35,115 @@ def generate_copy_sources_script_from_paths(dep_dirs):
     return lines
 
 def generate_copy_resources_script_from_paths(resource_modules):
-    """Generate script lines to copy resource files to .deps/<module>/Resources/.
+    """Generate script lines to copy resource files and generated source to .deps/<module>/.
 
     Pure function that takes string paths instead of File objects.
 
     Args:
-        resource_modules: dict mapping module_name -> list of resource short_paths (strings)
+        resource_modules: dict mapping module_name -> {resources: [paths], generated_source: path}
 
     Returns:
         List of shell script lines
     """
     lines = []
-    for res_name, resource_paths in resource_modules.items():
-        lines.append("# Copy {name} resources".format(name = res_name))
+    for res_name, res_info in resource_modules.items():
+        lines.append("# Copy {name} resources and generated source".format(name = res_name))
         lines.append('mkdir -p "$DEPS_DIR/{name}/Resources"'.format(name = res_name))
-        for res_path in resource_paths:
+
+        # Copy resource files
+        for res_path in res_info.get("resources", []):
             lines.append('cp "$RUNFILES_DIR/_main/{src}" "$DEPS_DIR/{name}/Resources/"'.format(
                 src = res_path,
                 name = res_name,
             ))
+
+        # Copy generated Swift source (respects force_unwrap and all other options from original build)
+        generated_source = res_info.get("generated_source")
+        if generated_source:
+            lines.append('cp "$RUNFILES_DIR/_main/{src}" "$DEPS_DIR/{name}/"'.format(
+                src = generated_source,
+                name = res_name,
+            ))
+
         lines.append("")
     return lines
 
-def generate_sr_script_from_paths(resource_modules, sr_short_path):
-    """Generate script lines to run SwiftResources sr generate for each resource module.
+def generate_copy_cc_module_script_from_paths(cc_modules):
+    """Generate script lines to copy C/C++ sources and headers to .deps/.
 
-    Pure function that takes classified file info instead of File objects.
+    Pure function that takes string paths instead of File objects.
+    Sources go to .deps/<module>/, headers go to .deps/<module>/include/.
 
     Args:
-        resource_modules: dict mapping module_name -> dict with keys:
-            - "fonts": list of font basenames (strings)
-            - "images": list of image basenames (strings)
-            - "files": list of other file basenames (strings)
-        sr_short_path: short_path to the sr binary
+        cc_modules: dict mapping module_name -> {srcs: [paths], hdrs: [paths]}
 
     Returns:
         List of shell script lines
     """
     lines = []
+    for module_name, file_info in cc_modules.items():
+        src_paths = file_info.get("srcs", [])
+        hdr_paths = file_info.get("hdrs", [])
 
-    # Handle external dep path prefix
-    sr_path = sr_short_path
-    if sr_path.startswith("../"):
-        sr_path = sr_path[3:]  # Remove "../" prefix
+        lines.append("# Copy {module} C/C++ module".format(module = module_name))
+        lines.append('mkdir -p "$DEPS_DIR/{module}"'.format(module = module_name))
 
-    for res_name, file_info in resource_modules.items():
-        font_files = file_info.get("fonts", [])
-        image_files = file_info.get("images", [])
-        other_files = file_info.get("files", [])
+        # Copy source files to module root
+        for src_path in src_paths:
+            lines.append('cp "$RUNFILES_DIR/_main/{src}" "$DEPS_DIR/{module}/"'.format(
+                src = src_path,
+                module = module_name,
+            ))
 
-        lines.extend([
-            "# Generate SwiftResources for {name}".format(name = res_name),
-            "# Try multiple possible runfiles locations for sr",
-            'SR=""',
-            "for path in \\",
-            '  "$RUNFILES_DIR/{sr}" \\'.format(sr = sr_path),
-            '  "$RUNFILES_DIR/_main/../{sr}" \\'.format(sr = sr_path),
-            '  "$RUNFILES_DIR/rules_swift_resources/sr"; do',
-            '  if [ -x "$path" ]; then',
-            '    SR="$path"',
-            "    break",
-            "  fi",
-            "done",
-            "",
-            'if [ -n "$SR" ]; then',
-            '  echo "Running SwiftResources: $SR"',
-            '  "$SR" generate \\',
-            "    --access-level public \\",
-            '    --module-name "{name}" \\'.format(name = res_name),
-            "    --bundle .module \\",
-        ])
-
-        # Add font files
-        if font_files:
-            lines.append("    --font-file \\")
-            for filename in font_files:
-                lines.append('    "$DEPS_DIR/{name}/Resources/{filename}" \\'.format(
-                    name = res_name,
-                    filename = filename,
+        # Copy headers to include/ subdirectory
+        if hdr_paths:
+            lines.append('mkdir -p "$DEPS_DIR/{module}/include"'.format(module = module_name))
+            for hdr_path in hdr_paths:
+                lines.append('cp "$RUNFILES_DIR/_main/{hdr}" "$DEPS_DIR/{module}/include/"'.format(
+                    hdr = hdr_path,
+                    module = module_name,
                 ))
 
-        # Add image files
-        if image_files:
-            lines.append("    --image-file \\")
-            for filename in image_files:
-                lines.append('    "$DEPS_DIR/{name}/Resources/{filename}" \\'.format(
-                    name = res_name,
-                    filename = filename,
+        lines.append("")
+    return lines
+
+def generate_copy_objc_module_script_from_paths(objc_modules):
+    """Generate script lines to copy Objective-C sources and headers to .deps/.
+
+    Pure function that takes string paths instead of File objects.
+    Sources go to .deps/<module>/, headers go to .deps/<module>/include/.
+
+    Args:
+        objc_modules: dict mapping module_name -> {srcs: [paths], hdrs: [paths]}
+
+    Returns:
+        List of shell script lines
+    """
+    lines = []
+    for module_name, file_info in objc_modules.items():
+        src_paths = file_info.get("srcs", [])
+        hdr_paths = file_info.get("hdrs", [])
+
+        lines.append("# Copy {module} Objective-C module".format(module = module_name))
+        lines.append('mkdir -p "$DEPS_DIR/{module}"'.format(module = module_name))
+
+        # Copy source files to module root
+        for src_path in src_paths:
+            lines.append('cp "$RUNFILES_DIR/_main/{src}" "$DEPS_DIR/{module}/"'.format(
+                src = src_path,
+                module = module_name,
+            ))
+
+        # Copy headers to include/ subdirectory
+        if hdr_paths:
+            lines.append('mkdir -p "$DEPS_DIR/{module}/include"'.format(module = module_name))
+            for hdr_path in hdr_paths:
+                lines.append('cp "$RUNFILES_DIR/_main/{hdr}" "$DEPS_DIR/{module}/include/"'.format(
+                    hdr = hdr_path,
+                    module = module_name,
                 ))
 
-        # Add other files
-        if other_files:
-            lines.append("    --file-path \\")
-            for filename in other_files:
-                lines.append('    "$DEPS_DIR/{name}/Resources/{filename}" \\'.format(
-                    name = res_name,
-                    filename = filename,
-                ))
-
-        lines.extend([
-            '    --output "$DEPS_DIR/{name}/{name}.swift"'.format(name = res_name),
-            "else",
-            '  echo "Warning: SwiftResources sr not found, skipping resource code generation"',
-            '  echo "Searched in: $RUNFILES_DIR"',
-            "fi",
-            "",
-        ])
-
+        lines.append("")
     return lines
 
 # =============================================================================
@@ -164,56 +166,55 @@ def generate_copy_sources_script(dep_dirs):
     return generate_copy_sources_script_from_paths(path_dict)
 
 def generate_copy_resources_script(resource_modules):
-    """Generate script lines to copy resource files to .deps/<module>/Resources/.
+    """Generate script lines to copy resource files and generated source to .deps/<module>/.
 
     Args:
-        resource_modules: dict mapping module_name -> list of resource File objects
+        resource_modules: dict mapping module_name -> {resources: [File], generated_source: File}
 
     Returns:
         List of shell script lines
     """
-    path_dict = {
-        res_name: [res_file.short_path for res_file in res_files]
-        for res_name, res_files in resource_modules.items()
-    }
+    path_dict = {}
+    for res_name, res_info in resource_modules.items():
+        path_dict[res_name] = {
+            "resources": [f.short_path for f in res_info.get("resources", [])],
+            "generated_source": res_info["generated_source"].short_path if res_info.get("generated_source") else None,
+        }
     return generate_copy_resources_script_from_paths(path_dict)
 
-def _classify_resource_file(f):
-    """Classify a resource file by type based on extension.
+def generate_copy_cc_module_script(cc_modules):
+    """Generate script lines to copy C/C++ sources and headers to .deps/.
 
     Args:
-        f: A File object
-
-    Returns:
-        Tuple of (category, basename) where category is "fonts", "images", or "files"
-    """
-    path = f.path
-    if path.endswith(".ttf") or path.endswith(".otf"):
-        return ("fonts", f.basename)
-    elif path.endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg", ".heic")):
-        return ("images", f.basename)
-    else:
-        return ("files", f.basename)
-
-def generate_sr_script(resource_modules, sr_short_path):
-    """Generate script lines to run SwiftResources sr generate for each resource module.
-
-    Args:
-        resource_modules: dict mapping module_name -> list of resource File objects
-        sr_short_path: short_path to the sr binary
+        cc_modules: dict mapping module_name -> {srcs: [File], hdrs: [File]}
 
     Returns:
         List of shell script lines
     """
-    classified = {}
-    for res_name, res_files in resource_modules.items():
-        file_info = {"fonts": [], "images": [], "files": []}
-        for f in res_files:
-            category, basename = _classify_resource_file(f)
-            file_info[category].append(basename)
-        classified[res_name] = file_info
+    path_dict = {}
+    for module_name, file_info in cc_modules.items():
+        path_dict[module_name] = {
+            "srcs": [f.short_path for f in file_info.get("srcs", [])],
+            "hdrs": [f.short_path for f in file_info.get("hdrs", [])],
+        }
+    return generate_copy_cc_module_script_from_paths(path_dict)
 
-    return generate_sr_script_from_paths(classified, sr_short_path)
+def generate_copy_objc_module_script(objc_modules):
+    """Generate script lines to copy Objective-C sources and headers to .deps/.
+
+    Args:
+        objc_modules: dict mapping module_name -> {srcs: [File], hdrs: [File]}
+
+    Returns:
+        List of shell script lines
+    """
+    path_dict = {}
+    for module_name, file_info in objc_modules.items():
+        path_dict[module_name] = {
+            "srcs": [f.short_path for f in file_info.get("srcs", [])],
+            "hdrs": [f.short_path for f in file_info.get("hdrs", [])],
+        }
+    return generate_copy_objc_module_script_from_paths(path_dict)
 
 def generate_base_script(package_dir):
     """Generate the base shell script setup lines.

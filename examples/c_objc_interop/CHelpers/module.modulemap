@@ -1,0 +1,8 @@
+module CHelpers {
+    header "CryptoHelpers.h"
+    header "SystemInfo.h"
+    header "CompressionHelpers.h"
+    header "TimingHelpers.h"
+    header "UserInfo.h"
+    export *
+}

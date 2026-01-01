@@ -8,6 +8,9 @@ def generate_package_swift(
         dep_modules,
         resource_modules,
         module_deps = None,
+        cc_modules = None,
+        objc_modules = None,
+        extra_excludes = None,
         ios_version = "18",
         macos_version = "",
         tvos_version = "",
@@ -17,9 +20,12 @@ def generate_package_swift(
 
     Args:
         name: The main module name (from the swift_library target)
-        dep_modules: List of dependency module names
+        dep_modules: List of Swift dependency module names
         resource_modules: List of resource module names
         module_deps: Dict mapping module names to their dependency module names
+        cc_modules: List of C/C++ module names
+        objc_modules: List of Objective-C module names
+        extra_excludes: Additional directories/files to exclude from main target
         ios_version: iOS deployment target version
         macos_version: macOS deployment target version (empty to omit)
         tvos_version: tvOS deployment target version (empty to omit)
@@ -31,6 +37,12 @@ def generate_package_swift(
     """
     if module_deps == None:
         module_deps = {}
+    if cc_modules == None:
+        cc_modules = []
+    if objc_modules == None:
+        objc_modules = []
+    if extra_excludes == None:
+        extra_excludes = []
 
     # Filter out resource modules from dep_modules to avoid duplicates
     filtered_dep_modules = [m for m in dep_modules if m not in resource_modules]
@@ -68,9 +80,37 @@ def generate_package_swift(
     ]
 
     # All available modules (for filtering deps)
-    all_modules = set(filtered_dep_modules + list(resource_modules))
+    all_modules = set(filtered_dep_modules + list(resource_modules) + cc_modules + objc_modules)
 
-    # Add dependency module targets - paths point to .deps/
+    # Add C/C++ module targets first (they're typically at the bottom of the dependency tree)
+    for module in cc_modules:
+        deps = module_deps.get(module, [])
+        deps = [d for d in deps if d in all_modules and d != module]
+        deps_str = ", ".join(['"{}"'.format(d) for d in deps])
+        lines.extend([
+            "        .target(",
+            '            name: "{module}",'.format(module = module),
+            "            dependencies: [{deps}],".format(deps = deps_str),
+            '            path: ".deps/{module}",'.format(module = module),
+            '            publicHeadersPath: "include"',
+            "        ),",
+        ])
+
+    # Add Objective-C module targets (typically depend on C modules)
+    for module in objc_modules:
+        deps = module_deps.get(module, [])
+        deps = [d for d in deps if d in all_modules and d != module]
+        deps_str = ", ".join(['"{}"'.format(d) for d in deps])
+        lines.extend([
+            "        .target(",
+            '            name: "{module}",'.format(module = module),
+            "            dependencies: [{deps}],".format(deps = deps_str),
+            '            path: ".deps/{module}",'.format(module = module),
+            '            publicHeadersPath: "include"',
+            "        ),",
+        ])
+
+    # Add Swift dependency module targets
     for module in filtered_dep_modules:
         # Get deps from module_deps, filter to only include modules we have
         deps = module_deps.get(module, [])
@@ -93,7 +133,8 @@ def generate_package_swift(
         ])
 
     # Add main view target - path is "." (the Views directory itself)
-    all_deps = filtered_dep_modules + list(resource_modules)
+    # Include all module types in dependencies
+    all_deps = cc_modules + objc_modules + filtered_dep_modules + list(resource_modules)
 
     # Remove duplicates while preserving order
     seen = set()
@@ -104,12 +145,29 @@ def generate_package_swift(
             unique_deps.append(d)
 
     deps_str = ", ".join(['"{}"'.format(d) for d in unique_deps])
+
+    # Build exclude list for the main target
+    # Only include excludes that are very likely to exist in any Bazel project
+    excludes = [
+        "BUILD.bazel",
+        ".deps",
+        "Package.swift",
+        "MODULE.bazel",
+        "MODULE.bazel.lock",
+    ]
+
+    # Add any user-specified extra excludes (for source directories, bazel symlinks, etc.)
+    excludes.extend(extra_excludes)
+
+    # Format the exclude list
+    exclude_str = ", ".join(['"{}"'.format(e) for e in excludes])
+
     lines.extend([
         "        .target(",
         '            name: "{name}",'.format(name = name),
         "            dependencies: [{deps}],".format(deps = deps_str),
         '            path: ".",',
-        '            exclude: ["BUILD.bazel", ".deps", "Package.swift", "Package.resolved"]',
+        "            exclude: [{excludes}]".format(excludes = exclude_str),
         "        ),",
         "    ]",
         ")",

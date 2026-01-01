@@ -14,18 +14,9 @@ local_path_override(
 
 bazel_dep(name = "rules_swift_previews", version = "0.0.1")
 bazel_dep(name = "rules_swift", version = "3.4.1")
-bazel_dep(name = "rules_swift_resources", version = "0.2.0")
+bazel_dep(name = "rules_swift_resources", version = "0.3.1")
 bazel_dep(name = "apple_support", version = "2.0.0")
 
-# Enable swift_previews with rules_swift_resources integration
-swift_previews = use_extension(
-    "@rules_swift_previews//:extensions.bzl",
-    "swift_previews",
-)
-swift_previews.use_swift_resources()
-use_repo(swift_previews, "swift_previews")
-
-# Apple toolchain configuration
 apple_cc_configure = use_extension(
     "@apple_support//crosstool:setup.bzl",
     "apple_cc_configure_extension",

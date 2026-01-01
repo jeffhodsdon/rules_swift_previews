@@ -10,7 +10,6 @@ load(
     "generate_copy_resources_script_from_paths",
     "generate_copy_sources_script_from_paths",
     "generate_package_write_script",
-    "generate_sr_script_from_paths",
 )
 
 # =============================================================================
@@ -91,7 +90,10 @@ def _copy_resources_test_impl(ctx):
     env = unittest.begin(ctx)
 
     result = generate_copy_resources_script_from_paths({
-        "Resources": ["res/colors.json", "res/icon.png"],
+        "Resources": {
+            "resources": ["res/colors.json", "res/icon.png"],
+            "generated_source": "Resources.swift",
+        },
     })
     script = "\n".join(result)
 
@@ -102,100 +104,39 @@ def _copy_resources_test_impl(ctx):
     asserts.true(env, 'cp "$RUNFILES_DIR/_main/res/colors.json" "$DEPS_DIR/Resources/Resources/"' in script)
     asserts.true(env, 'cp "$RUNFILES_DIR/_main/res/icon.png" "$DEPS_DIR/Resources/Resources/"' in script)
 
+    # Check generated source is copied to module root
+    asserts.true(env, 'cp "$RUNFILES_DIR/_main/Resources.swift" "$DEPS_DIR/Resources/"' in script)
+
     return unittest.end(env)
 
 _copy_resources_test = unittest.make(_copy_resources_test_impl)
 
 # =============================================================================
-# Test: generate_sr_script_from_paths
+# Test: generate_copy_resources_script_from_paths without generated_source
 # =============================================================================
 
-def _sr_script_test_impl(ctx):
+def _copy_resources_no_source_test_impl(ctx):
     env = unittest.begin(ctx)
 
-    result = generate_sr_script_from_paths(
-        {
-            "Resources": {
-                "fonts": ["MyFont.ttf"],
-                "images": ["icon.png", "logo.pdf"],
-                "files": ["colors.json"],
-            },
+    # Test with generated_source = None (fallback case)
+    result = generate_copy_resources_script_from_paths({
+        "Resources": {
+            "resources": ["fonts/Font.ttf"],
+            "generated_source": None,
         },
-        "external/rules_swift_resources/sr",
-    )
+    })
     script = "\n".join(result)
 
-    # Check sr binary lookup
-    asserts.true(env, 'SR=""' in script)
-    asserts.true(env, 'if [ -x "$path" ]' in script)
+    # Check resources are still copied
+    asserts.true(env, 'mkdir -p "$DEPS_DIR/Resources/Resources"' in script)
+    asserts.true(env, 'cp "$RUNFILES_DIR/_main/fonts/Font.ttf" "$DEPS_DIR/Resources/Resources/"' in script)
 
-    # Check sr generate command
-    asserts.true(env, '"$SR" generate' in script)
-    asserts.true(env, "--access-level public" in script)
-    asserts.true(env, '--module-name "Resources"' in script)
-    asserts.true(env, "--bundle .module" in script)
-
-    # Check font files
-    asserts.true(env, "--font-file" in script)
-    asserts.true(env, "$DEPS_DIR/Resources/Resources/MyFont.ttf" in script)
-
-    # Check image files
-    asserts.true(env, "--image-file" in script)
-    asserts.true(env, "$DEPS_DIR/Resources/Resources/icon.png" in script)
-    asserts.true(env, "$DEPS_DIR/Resources/Resources/logo.pdf" in script)
-
-    # Check other files
-    asserts.true(env, "--file-path" in script)
-    asserts.true(env, "$DEPS_DIR/Resources/Resources/colors.json" in script)
-
-    # Check output
-    asserts.true(env, '--output "$DEPS_DIR/Resources/Resources.swift"' in script)
+    # No generated source copy should be present
+    asserts.false(env, 'Resources.swift' in script)
 
     return unittest.end(env)
 
-_sr_script_test = unittest.make(_sr_script_test_impl)
-
-# =============================================================================
-# Test: generate_sr_script_from_paths with external prefix stripping
-# =============================================================================
-
-def _sr_script_external_prefix_test_impl(ctx):
-    env = unittest.begin(ctx)
-
-    result = generate_sr_script_from_paths(
-        {"Res": {"fonts": [], "images": [], "files": ["data.json"]}},
-        "../rules_swift_resources/sr",
-    )
-    script = "\n".join(result)
-
-    # ../rules_swift_resources/sr should become rules_swift_resources/sr
-    asserts.true(env, "$RUNFILES_DIR/rules_swift_resources/sr" in script)
-    asserts.false(env, "$RUNFILES_DIR/../" in script)
-
-    return unittest.end(env)
-
-_sr_script_external_prefix_test = unittest.make(_sr_script_external_prefix_test_impl)
-
-# =============================================================================
-# Test: generate_sr_script_from_paths fallback warning
-# =============================================================================
-
-def _sr_script_fallback_test_impl(ctx):
-    env = unittest.begin(ctx)
-
-    result = generate_sr_script_from_paths(
-        {"MyRes": {"fonts": [], "images": [], "files": []}},
-        "some/path/sr",
-    )
-    script = "\n".join(result)
-
-    # Check fallback warning is present
-    asserts.true(env, "Warning: SwiftResources sr not found" in script)
-    asserts.true(env, "Searched in: $RUNFILES_DIR" in script)
-
-    return unittest.end(env)
-
-_sr_script_fallback_test = unittest.make(_sr_script_fallback_test_impl)
+_copy_resources_no_source_test = unittest.make(_copy_resources_no_source_test_impl)
 
 # =============================================================================
 # Test: generate_package_write_script
@@ -241,8 +182,6 @@ def script_generator_test_suite(name):
         _copy_sources_test,
         _copy_sources_empty_test,
         _copy_resources_test,
-        _sr_script_test,
-        _sr_script_external_prefix_test,
-        _sr_script_fallback_test,
+        _copy_resources_no_source_test,
         _package_write_script_test,
     )

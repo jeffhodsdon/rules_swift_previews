@@ -1,17 +1,15 @@
 # Copyright 2025 Jeff Hodsdon
 # SPDX-License-Identifier: Apache-2.0
 
-"""Non-bzlmod entry point for rules_swift_previews.
+"""Public API for rules_swift_previews.
 
-This file provides a fallback for users not using bzlmod (WORKSPACE-based projects).
-Note: This basic version does NOT support automatic resource module detection.
-For resource support, migrate to bzlmod and set enable_resources = True.
+Swift resource modules (swift_resources_library) are automatically detected
+via the aspect and their generated source files are included in the preview package.
 """
 
 load("//internal:core.bzl", _swift_previews_package = "swift_previews_package")
 load("//internal:providers.bzl", _SourceFilesInfo = "SourceFilesInfo")
 
-# Re-export for users
 SourceFilesInfo = _SourceFilesInfo
 swift_previews_package = _swift_previews_package
 

@@ -1,0 +1,172 @@
+# Copyright 2025 Jeff Hodsdon
+# SPDX-License-Identifier: Apache-2.0
+
+# =============================================================================
+# C + Objective-C + Swift Interop Example
+# =============================================================================
+#
+# This example demonstrates swift_previews_package with multi-language
+# dependencies showcasing 5 different C system APIs:
+#
+#   1. CommonCrypto - SHA256/MD5 hashing
+#   2. sysctl       - System info (CPU, memory, model)
+#   3. zlib         - Data compression
+#   4. mach         - High-precision timing
+#   5. getpwuid     - User info lookup
+#
+# DEPENDENCY GRAPH:
+#
+#   SystemDemoView (SwiftUI)     <-- swift_previews_package target
+#          |
+#          v
+#   SystemUtilities (Swift)      <-- Modern Swift API
+#          |
+#          v
+#   SystemBridge (Objective-C)   <-- ObjC bridge for Swift
+#          |
+#          v
+#   CHelpers (C)                 <-- 5 C libraries
+#
+# RUN PREVIEWS:
+#   bazel run //:previews
+#
+# This generates:
+#   ./Package.swift
+#   ./.deps/CHelpers/          (C sources + headers + modulemap)
+#   ./.deps/SystemBridge/      (ObjC sources + headers)
+#   ./.deps/SystemUtilities/   (Swift sources)
+#
+# Then open Package.swift in Xcode to use SwiftUI Previews.
+# ALL features work in previews - no keychain entitlements needed!
+#
+# =============================================================================
+
+load("@rules_swift//swift:swift.bzl", "swift_interop_hint", "swift_library")
+load("@rules_swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
+
+# =============================================================================
+# Layer 1: C Library - CHelpers
+# =============================================================================
+#
+# Pure C library providing 5 different system APIs:
+#   - CryptoHelpers: SHA256/MD5 via CommonCrypto
+#   - SystemInfo: CPU, memory, model via sysctl
+#   - CompressionHelpers: zlib compression
+#   - TimingHelpers: mach_absolute_time precision timing
+#   - UserInfo: getpwuid user lookup
+#
+# Swift imports via module.modulemap which exports all headers.
+
+swift_interop_hint(
+    name = "CHelpers_swift_hint",
+    module_map = "CHelpers/module.modulemap",
+    module_name = "CHelpers",
+)
+
+cc_library(
+    name = "CHelpers",
+    srcs = [
+        "CHelpers/CompressionHelpers.c",
+        "CHelpers/CryptoHelpers.c",
+        "CHelpers/SystemInfo.c",
+        "CHelpers/TimingHelpers.c",
+        "CHelpers/UserInfo.c",
+    ],
+    hdrs = [
+        "CHelpers/CompressionHelpers.h",
+        "CHelpers/CryptoHelpers.h",
+        "CHelpers/SystemInfo.h",
+        "CHelpers/TimingHelpers.h",
+        "CHelpers/UserInfo.h",
+    ],
+    aspect_hints = [":CHelpers_swift_hint"],
+    includes = ["CHelpers"],
+    visibility = ["//visibility:public"],
+)
+
+# =============================================================================
+# Layer 2: Objective-C Library - SystemBridge
+# =============================================================================
+#
+# Objective-C wrapper providing Swift-friendly APIs around the C functions.
+# Handles buffer management, string conversion, and data types.
+#
+# Key points:
+#   - objc_library auto-generates a module map
+#   - module_name sets the Swift import name
+
+objc_library(
+    name = "SystemBridge",
+    srcs = ["ObjCBridge/SystemBridge.m"],
+    hdrs = ["ObjCBridge/SystemBridge.h"],
+    includes = ["ObjCBridge"],
+    module_name = "SystemBridge",
+    visibility = ["//visibility:public"],
+    deps = [":CHelpers"],
+)
+
+# =============================================================================
+# Layer 3: Swift Library - SystemUtilities
+# =============================================================================
+#
+# Swift wrapper providing modern API with structs and enums.
+# Imports SystemBridge which transitively brings in CHelpers.
+
+swift_library(
+    name = "SystemUtilities",
+    srcs = ["SwiftWrapper/SystemUtilities.swift"],
+    module_name = "SystemUtilities",
+    visibility = ["//visibility:public"],
+    deps = [":SystemBridge"],
+)
+
+# =============================================================================
+# Layer 4: SwiftUI Views - SystemDemoView
+# =============================================================================
+#
+# SwiftUI views demonstrating all 5 C system APIs.
+# This is the target we generate Xcode previews for.
+
+swift_library(
+    name = "SystemDemoView",
+    srcs = glob(
+        ["*.swift"],
+        exclude = SWIFT_PREVIEW_EXCLUDES,
+    ),
+    module_name = "SystemDemoView",
+    visibility = ["//visibility:public"],
+    deps = [":SystemUtilities"],
+)
+
+# =============================================================================
+# Preview Package Generator
+# =============================================================================
+#
+# Generates Package.swift and copies all dependency sources to .deps/
+#
+# USAGE:
+#   bazel run //:previews
+#
+# OUTPUT:
+#   ./Package.swift              - SPM package manifest
+#   ./.deps/CHelpers/            - C: headers in include/, sources, modulemap
+#   ./.deps/SystemBridge/        - ObjC: headers in include/, sources
+#   ./.deps/SystemUtilities/     - Swift: source files
+#
+# Then: Open Package.swift in Xcode, SwiftUI Previews will work!
+
+swift_previews_package(
+    name = "previews",
+    lib = ":SystemDemoView",
+    # Exclude source directories with non-Swift code and bazel symlinks
+    extra_excludes = [
+        "CHelpers",
+        "ObjCBridge",
+        "SwiftWrapper",
+        "bazel-bin",
+        "bazel-out",
+        "bazel-testlogs",
+        "bazel-c_objc_interop",  # bazel-<workspace_name> symlink
+    ],
+    macos_version = "14",
+)

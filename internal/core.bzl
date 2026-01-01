@@ -4,32 +4,37 @@
 """Core implementation for rules_swift_previews.
 
 Uses convention-based resource detection (checks rule kind) rather than
-importing SwiftResourceInfo.
+importing SwiftResourceInfo. Delegates source collection to language-specific
+modules for Swift, C/C++, and Objective-C.
 """
 
+load("//internal:cc_collector.bzl", "collect_cc_sources")
+load("//internal:objc_collector.bzl", "collect_objc_sources")
 load("//internal:package_generator.bzl", "generate_package_swift")
 load("//internal:providers.bzl", "SourceFilesInfo")
 load(
     "//internal:script_generator.bzl",
     "generate_base_script",
+    "generate_copy_cc_module_script",
+    "generate_copy_objc_module_script",
     "generate_copy_resources_script",
     "generate_copy_sources_script",
     "generate_package_write_script",
-    "generate_sr_script",
 )
-
-_SWIFT_RESOURCES_RULE_KIND = "swift_resources"
+load("//internal:swift_collector.bzl", "collect_swift_resources", "collect_swift_sources")
 
 def _source_collector_aspect_impl(target, ctx):
-    """Aspect that collects source files and resources from swift_library targets.
+    """Aspect that collects source files from library targets.
 
-    Resource modules are detected by convention (checking rule kind) rather
-    than requiring SwiftResourceInfo provider import.
+    Handles swift_library, cc_library, and objc_library targets.
+    Resource modules are detected by convention (checking rule kind).
     """
     sources = []
     module_sources = {}
     resource_modules = {}
     module_deps = {}
+    cc_modules = {}
+    objc_modules = {}
 
     # Skip external dependencies
     label = target.label
@@ -39,51 +44,57 @@ def _source_collector_aspect_impl(target, ctx):
             module_sources = {},
             resource_modules = {},
             module_deps = {},
+            cc_modules = {},
+            objc_modules = {},
         )]
 
-    # Detect swift_resources rule (created by swift_resources_library macro)
-    if ctx.rule.kind == _SWIFT_RESOURCES_RULE_KIND:
-        module_name = target.label.name
-        if hasattr(ctx.rule.attr, "module_name") and ctx.rule.attr.module_name:
-            module_name = ctx.rule.attr.module_name
+    # Collect from this target using language-specific collectors
+    swift_result = collect_swift_sources(ctx, target)
+    if swift_result:
+        module_name, swift_sources = swift_result
+        sources.extend(swift_sources)
+        module_sources[module_name] = swift_sources
 
-        # Extract resource files from files, fonts, images attributes
-        resource_files = []
-        for attr_name in ["files", "fonts", "images"]:
-            if hasattr(ctx.rule.attr, attr_name):
-                for res in getattr(ctx.rule.attr, attr_name):
-                    resource_files.extend(res.files.to_list())
-        if resource_files:
-            resource_modules[module_name] = resource_files
+    resource_result = collect_swift_resources(ctx, target)
+    if resource_result:
+        module_name, resource_info = resource_result
+        resource_modules[module_name] = resource_info
 
-    # Get the module name for source collection
+    cc_result = collect_cc_sources(ctx, target)
+    if cc_result:
+        module_name, cc_info = cc_result
+        cc_modules[module_name] = cc_info
+
+    objc_result = collect_objc_sources(ctx, target)
+    if objc_result:
+        module_name, objc_info = objc_result
+        objc_modules[module_name] = objc_info
+
+    # Get module name for dependency tracking
     module_name = None
     if hasattr(ctx.rule.attr, "module_name") and ctx.rule.attr.module_name:
         module_name = ctx.rule.attr.module_name
     elif hasattr(target, "label"):
         module_name = target.label.name
 
-    # Collect sources from this target
-    if hasattr(ctx.rule.attr, "srcs"):
-        target_sources = []
-        for src in ctx.rule.attr.srcs:
-            for f in src.files.to_list():
-                if f.path.endswith(".swift"):
-                    sources.append(f)
-                    target_sources.append(f)
-        if module_name and target_sources:
-            module_sources[module_name] = target_sources
-
     # Track this module's direct dependencies
     direct_dep_modules = []
     if hasattr(ctx.rule.attr, "deps"):
         for dep in ctx.rule.attr.deps:
             if SourceFilesInfo in dep:
-                # Collect module names from this dependency's source info
-                for name in dep[SourceFilesInfo].module_sources.keys():
+                dep_info = dep[SourceFilesInfo]
+
+                # Collect module names from all dependency types
+                for name in dep_info.module_sources.keys():
                     if name not in direct_dep_modules:
                         direct_dep_modules.append(name)
-                for name in dep[SourceFilesInfo].resource_modules.keys():
+                for name in dep_info.resource_modules.keys():
+                    if name not in direct_dep_modules:
+                        direct_dep_modules.append(name)
+                for name in dep_info.cc_modules.keys():
+                    if name not in direct_dep_modules:
+                        direct_dep_modules.append(name)
+                for name in dep_info.objc_modules.keys():
                     if name not in direct_dep_modules:
                         direct_dep_modules.append(name)
 
@@ -94,28 +105,37 @@ def _source_collector_aspect_impl(target, ctx):
     if hasattr(ctx.rule.attr, "deps"):
         for dep in ctx.rule.attr.deps:
             if SourceFilesInfo in dep:
-                sources.extend(dep[SourceFilesInfo].sources.to_list())
-                for name, srcs in dep[SourceFilesInfo].module_sources.items():
+                dep_info = dep[SourceFilesInfo]
+                sources.extend(dep_info.sources.to_list())
+                for name, srcs in dep_info.module_sources.items():
                     if name not in module_sources:
                         module_sources[name] = srcs
-                for name, res in dep[SourceFilesInfo].resource_modules.items():
+                for name, res in dep_info.resource_modules.items():
                     if name not in resource_modules:
                         resource_modules[name] = res
-                for name, deps in dep[SourceFilesInfo].module_deps.items():
+                for name, deps in dep_info.module_deps.items():
                     if name not in module_deps:
                         module_deps[name] = deps
+                for name, cc_info in dep_info.cc_modules.items():
+                    if name not in cc_modules:
+                        cc_modules[name] = cc_info
+                for name, objc_info in dep_info.objc_modules.items():
+                    if name not in objc_modules:
+                        objc_modules[name] = objc_info
 
     return [SourceFilesInfo(
         sources = depset(sources),
         module_sources = module_sources,
         resource_modules = resource_modules,
         module_deps = module_deps,
+        cc_modules = cc_modules,
+        objc_modules = objc_modules,
     )]
 
 source_collector_aspect = aspect(
     implementation = _source_collector_aspect_impl,
     attr_aspects = ["deps"],
-    doc = "Collects source files and resources from swift_library targets.",
+    doc = "Collects source files from swift_library, cc_library, and objc_library targets.",
 )
 
 def swift_previews_package_impl(ctx):
@@ -135,44 +155,75 @@ def swift_previews_package_impl(ctx):
     dep_dirs = {}
     resource_modules = {}
     module_deps = {}
+    cc_modules = {}
+    objc_modules = {}
     all_sources = []
     all_resource_files = []
+    all_cc_files = []
+    all_objc_files = []
 
     if SourceFilesInfo in lib:
         info = lib[SourceFilesInfo]
         all_sources.extend(info.sources.to_list())
+
+        # Collect Swift module sources
         for module_name, sources in info.module_sources.items():
             if module_name == lib_module_name:
                 continue
             if module_name not in dep_dirs:
                 dep_dirs[module_name] = []
             dep_dirs[module_name].extend(sources)
-        for module_name, resources in info.resource_modules.items():
-            resource_modules[module_name] = resources
-            all_resource_files.extend(resources)
+
+        # Collect resource modules
+        for module_name, res_info in info.resource_modules.items():
+            resource_modules[module_name] = res_info
+            all_resource_files.extend(res_info.get("resources", []))
+            if res_info.get("generated_source"):
+                all_resource_files.append(res_info["generated_source"])
 
         # Collect module dependencies
         for module_name, deps in info.module_deps.items():
             if module_name != lib_module_name:
                 module_deps[module_name] = deps
 
+        # Collect C/C++ modules
+        for module_name, cc_info in info.cc_modules.items():
+            cc_modules[module_name] = cc_info
+            all_cc_files.extend(cc_info.get("srcs", []))
+            all_cc_files.extend(cc_info.get("hdrs", []))
+
+        # Collect Objective-C modules
+        for module_name, objc_info in info.objc_modules.items():
+            objc_modules[module_name] = objc_info
+            all_objc_files.extend(objc_info.get("srcs", []))
+            all_objc_files.extend(objc_info.get("hdrs", []))
+
     # Build script
     script_lines = generate_base_script(ctx.attr.package_dir)
+
+    # Copy Swift sources
     script_lines.extend(generate_copy_sources_script(dep_dirs))
+
+    # Copy C/C++ modules (sources + headers)
+    if cc_modules:
+        script_lines.extend(generate_copy_cc_module_script(cc_modules))
+
+    # Copy Objective-C modules (sources + headers)
+    if objc_modules:
+        script_lines.extend(generate_copy_objc_module_script(objc_modules))
 
     # Handle resources if found
     if resource_modules:
         script_lines.extend(generate_copy_resources_script(resource_modules))
-
-        # Generate Swift resource accessors if sr binary is available
-        if hasattr(ctx.file, "_sr") and ctx.file._sr:
-            script_lines.extend(generate_sr_script(resource_modules, ctx.file._sr.short_path))
 
     package_swift = generate_package_swift(
         name = lib_module_name,
         dep_modules = list(dep_dirs.keys()),
         resource_modules = list(resource_modules.keys()),
         module_deps = module_deps,
+        cc_modules = list(cc_modules.keys()),
+        objc_modules = list(objc_modules.keys()),
+        extra_excludes = ctx.attr.extra_excludes,
         ios_version = ctx.attr.ios_version,
         macos_version = ctx.attr.macos_version,
         tvos_version = ctx.attr.tvos_version,
@@ -190,9 +241,7 @@ def swift_previews_package_impl(ctx):
     )
 
     # Collect runfiles
-    runfiles_files = all_sources + all_resource_files
-    if hasattr(ctx.file, "_sr") and ctx.file._sr:
-        runfiles_files.append(ctx.file._sr)
+    runfiles_files = all_sources + all_resource_files + all_cc_files + all_objc_files
     runfiles = ctx.runfiles(files = runfiles_files)
 
     return [DefaultInfo(
@@ -210,6 +259,10 @@ _BASE_ATTRS = {
     "package_dir": attr.string(
         mandatory = True,
         doc = "Path to the package directory",
+    ),
+    "extra_excludes": attr.string_list(
+        default = [],
+        doc = "Additional directories/files to exclude from the main SPM target",
     ),
     "ios_version": attr.string(default = "18"),
     "macos_version": attr.string(default = ""),
@@ -249,6 +302,7 @@ def create_swift_previews_macro(rule_fn):
     def swift_previews_package(
             name,
             lib,
+            extra_excludes = [],
             ios_version = "18",
             macos_version = "",
             tvos_version = "",
@@ -260,6 +314,7 @@ def create_swift_previews_macro(rule_fn):
         Args:
             name: Target name (typically "previews")
             lib: The swift_library target to generate previews for
+            extra_excludes: Additional directories/files to exclude from the main SPM target
             ios_version: iOS deployment target (default: "18")
             macos_version: macOS deployment target (empty to omit)
             tvos_version: tvOS deployment target (empty to omit)
@@ -271,6 +326,7 @@ def create_swift_previews_macro(rule_fn):
             name = name,
             lib = lib,
             package_dir = native.package_name(),
+            extra_excludes = extra_excludes,
             ios_version = ios_version,
             macos_version = macos_version,
             tvos_version = tvos_version,

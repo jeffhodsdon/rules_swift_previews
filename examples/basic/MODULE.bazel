@@ -14,8 +14,5 @@ bazel_dep(name = "rules_swift_previews", version = "0.0.1")
 bazel_dep(name = "rules_swift", version = "3.4.1")
 bazel_dep(name = "apple_support", version = "1.17.1")
 
-swift_previews = use_extension("@rules_swift_previews//:extensions.bzl", "swift_previews")
-use_repo(swift_previews, "swift_previews")
-
 apple_cc_configure = use_extension("@apple_support//crosstool:setup.bzl", "apple_cc_configure_extension")
 use_repo(apple_cc_configure, "local_config_apple_cc")
