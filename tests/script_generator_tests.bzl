@@ -132,7 +132,7 @@ def _copy_resources_no_source_test_impl(ctx):
     asserts.true(env, 'cp "$RUNFILES_DIR/_main/fonts/Font.ttf" "$DEPS_DIR/Resources/Resources/"' in script)
 
     # No generated source copy should be present
-    asserts.false(env, 'Resources.swift' in script)
+    asserts.false(env, "Resources.swift" in script)
 
     return unittest.end(env)
 

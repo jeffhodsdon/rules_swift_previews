@@ -27,6 +27,7 @@ def _basic_package_test_impl(ctx):
     # Check main target structure
     asserts.true(env, ".target(" in result)
     asserts.true(env, 'path: "."' in result)
+
     # Default exclude list (users add more via extra_excludes)
     asserts.true(env, '"BUILD.bazel"' in result)
     asserts.true(env, '".deps"' in result)

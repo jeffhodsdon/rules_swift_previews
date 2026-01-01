@@ -41,6 +41,8 @@
 #
 # =============================================================================
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
 load("@rules_swift//swift:swift.bzl", "swift_interop_hint", "swift_library")
 load("@rules_swift_previews//:defs.bzl", "SWIFT_PREVIEW_EXCLUDES", "swift_previews_package")
 
@@ -157,7 +159,6 @@ swift_library(
 
 swift_previews_package(
     name = "previews",
-    lib = ":SystemDemoView",
     # Exclude source directories with non-Swift code and bazel symlinks
     extra_excludes = [
         "CHelpers",
@@ -168,5 +169,6 @@ swift_previews_package(
         "bazel-testlogs",
         "bazel-c_objc_interop",  # bazel-<workspace_name> symlink
     ],
+    lib = ":SystemDemoView",
     macos_version = "14",
 )
